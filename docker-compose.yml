@@ -32,7 +32,6 @@ services:
       "
     labels:
       - "coolify.managed=true"
-      # Tells Coolify to route your public web domain traffic cleanly to port 8080
       - "coolify.port=8080"
 
   # 2. Official PostgreSQL Database Engine
@@ -81,7 +80,6 @@ services:
       ANON_KEY: "${SERVICE_PASSWORD_ANON}"
       SERVICE_KEY: "${SERVICE_PASSWORD_SERVICE}"
       DB_CONN_STR: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
-      # Fixes Storage Node Crash:
       DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
       PGRST_JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
@@ -89,6 +87,26 @@ services:
       FILE_STORAGE_BACKEND_PATH: "/var/lib/storage"
       FILE_SIZE_LIMIT: "52428800"
       GLOBAL_S3_BUCKET: "stub-bucket"
+      # Map to European regional code parameter to pass initialization checks
+      REGION: "eu-central-1"
+
+  # 5. Kong API Routing Gateway Proxy
+  kong:
+    image: kong:2.8.1-alpine
+    restart: always
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG_STRING: |
+        _format_version: "1.1"
+        services:
+          - name: shelf-api
+            url: http://app:8080
+            routes:
+              - name: api-route
+                paths:
+                  - /
+    ports:
+      - "8000:8000"
 
 volumes:
   shelf_db_data:
