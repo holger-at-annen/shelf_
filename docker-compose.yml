@@ -17,6 +17,10 @@ services:
       SUPABASE_URL: "https://${COOLIFY_URL}"
       SERVER_URL: "https://${COOLIFY_URL}"
       PGPASSWORD: "${SERVICE_PASSWORD_DB}"
+      
+      # Fixes Map Validation Crash:
+      MAPTILER_TOKEN: "placeholder_token"
+      
       SMTP_HOST: "localhost"
       SMTP_PORT: "587"
       SMTP_USER: "placeholder"
