@@ -17,6 +17,8 @@ services:
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=https://${COOLIFY_URL}
+    # This automatically pushes migrations on startup if the DB is blank
+    command: sh -c "npx prisma db push && node server.js"
     labels:
       - "coolify.managed=true"
 
@@ -73,7 +75,7 @@ services:
       - STORAGE_BACKEND=file
       - FILE_STORAGE_BACKEND_PATH=/var/lib/storage
 
-  # 5. Official Kong Gateway Proxy (Maps network paths cleanly)
+  # 5. Official Kong Gateway Proxy
   kong:
     image: kong:2.8.1-alpine
     restart: always
@@ -83,7 +85,7 @@ services:
     volumes:
       - ./kong.yml:/etc/kong/kong.yml:ro
 
-  # 6. Automated One-Time Init Setup Container
+  # 6. Automated One-Time Init Setup Container (Only runs bucket logic now)
   supabase-init:
     image: postgres:15-alpine
     depends_on:
@@ -95,11 +97,9 @@ services:
       - PGPASSWORD=${DB_PASSWORD}
     command: >
       sh -c "
-        echo 'Executing Shelf Schema Setup...' &&
-        psql -h db -U postgres -d postgres -f /init-scripts/schema.sql &&
         echo 'Seeding Required Supabase Storage Buckets...' &&
         psql -h db -U postgres -d postgres -f /init-scripts/buckets.sql &&
-        echo 'Stack configuration completely ready!'
+        echo 'Storage structure initialization complete!'
       "
 
 volumes:
