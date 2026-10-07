@@ -82,7 +82,20 @@ services:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: "/etc/kong/kong.yml"
     volumes:
-      - ./kong.yml:/etc/kong/kong.yml:ro
+      # Coolify reads the 'content' block below and safely builds the file on your server disk
+      - type: bind
+        source: ./kong.yml
+        target: /etc/kong/kong.yml
+        read_only: true
+        content: |
+          _format_version: "1.1"
+          services:
+            - name: shelf-api
+              url: http://app:3000
+              routes:
+                - name: api-route
+                  paths:
+                    - /
 
   # 6. Automated One-Time Init Setup Container
   supabase-init:
@@ -91,7 +104,17 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./init-scripts:/init-scripts:ro
+      # Coolify automatically creates this directory and writes your SQL file inside
+      - type: bind
+        source: ./init-scripts/buckets.sql
+        target: /init-scripts/buckets.sql
+        read_only: true
+        content: |
+          -- Creates default Supabase storage buckets needed by Shelf
+          CREATE SCHEMA IF NOT EXISTS storage;
+          INSERT INTO storage.buckets (id, name, public) 
+          VALUES ('assets', 'assets', true) 
+          ON CONFLICT (id) DO NOTHING;
     environment:
       PGPASSWORD: "${SERVICE_PASSWORD_DB}"
     command: >
