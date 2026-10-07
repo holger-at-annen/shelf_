@@ -87,8 +87,8 @@ services:
       FILE_STORAGE_BACKEND_PATH: "/var/lib/storage"
       FILE_SIZE_LIMIT: "52428800"
       GLOBAL_S3_BUCKET: "stub-bucket"
-      # Map to European regional code parameter to pass initialization checks
       REGION: "eu-central-1"
+      TENANT_ID: "stub-tenant"
 
   # 5. Kong API Routing Gateway Proxy
   kong:
