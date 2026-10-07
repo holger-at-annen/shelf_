@@ -11,12 +11,19 @@ services:
     environment:
       DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       SESSION_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
-      INVITE_TOKEN_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}" # Resolves App Crash
+      INVITE_TOKEN_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
       SUPABASE_ANON_PUBLIC: "${SERVICE_PASSWORD_ANON}"
       SUPABASE_SERVICE_ROLE: "${SERVICE_PASSWORD_SERVICE}"
       SUPABASE_URL: "https://${COOLIFY_URL}"
       SERVER_URL: "https://${COOLIFY_URL}"
       PGPASSWORD: "${SERVICE_PASSWORD_DB}"
+      
+      # Fixes App Validation Error:
+      SMTP_HOST: "${SMTP_HOST:://example.com}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: "${SMTP_USER:-placeholder_user}"
+      SMTP_PWD: "${SMTP_PASSWORD:-placeholder_password}"
+      SMTP_FROM: "${SMTP_FROM_ADDRESS:-noreply@example.com}"
     command: >
       sh -c "
         npx prisma db push &&
@@ -52,7 +59,9 @@ services:
       GOTRUE_API_HOST: "0.0.0.0"
       GOTRUE_API_PORT: "9999"
       GOTRUE_DB_DRIVER: "postgres"
-      GOTRUE_DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres" # Resolves Auth Connection
+      # Fixes Auth Validation Errors:
+      DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
+      GOTRUE_DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       GOTRUE_SITE_URL: "https://${COOLIFY_URL}"
       GOTRUE_JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
       GOTRUE_JWT_EXP: "3600"
@@ -78,10 +87,11 @@ services:
       SERVICE_KEY: "${SERVICE_PASSWORD_SERVICE}"
       DB_CONN_STR: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
-      # Explicitly configures local filesystem routing instead of cloud S3 buckets
       STORAGE_BACKEND: "file"
       FILE_STORAGE_BACKEND_PATH: "/var/lib/storage"
       FILE_SIZE_LIMIT: "52428800"
+      # Fixes Storage Validation Error:
+      GLOBAL_S3_BUCKET: "stub-bucket"
 
 volumes:
   shelf_db_data:
