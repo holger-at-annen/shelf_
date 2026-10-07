@@ -14,7 +14,6 @@ services:
       INVITE_TOKEN_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
       SUPABASE_ANON_PUBLIC: "${SERVICE_PASSWORD_ANON}"
       SUPABASE_SERVICE_ROLE: "${SERVICE_PASSWORD_SERVICE}"
-      # Route internally through Docker network to prevent malformed URL crashes:
       SUPABASE_URL: "http://auth:9999"
       SERVER_URL: "https://${COOLIFY_URL}"
       PGPASSWORD: "${SERVICE_PASSWORD_DB}"
@@ -33,6 +32,8 @@ services:
       "
     labels:
       - "coolify.managed=true"
+      # Tells Coolify to route your public web domain traffic cleanly to port 8080
+      - "coolify.port=8080"
 
   # 2. Official PostgreSQL Database Engine
   db:
@@ -80,8 +81,9 @@ services:
       ANON_KEY: "${SERVICE_PASSWORD_ANON}"
       SERVICE_KEY: "${SERVICE_PASSWORD_SERVICE}"
       DB_CONN_STR: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
+      # Fixes Storage Node Crash:
+      DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
-      # Maps required authorization context token to fix storage layout exception:
       PGRST_JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
       STORAGE_BACKEND: "file"
       FILE_STORAGE_BACKEND_PATH: "/var/lib/storage"
