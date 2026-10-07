@@ -10,14 +10,12 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
-      NEXT_PUBLIC_SUPABASE_URL: "https://${COOLIFY_URL}"
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "${SERVICE_PASSWORD_ANON}"
-      SUPABASE_SERVICE_ROLE_KEY: "${SERVICE_PASSWORD_SERVICE}"
-      NEXTAUTH_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
-      NEXTAUTH_URL: "https://${COOLIFY_URL}"
-      # Passes password variable cleanly into container shell context
+      SESSION_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
+      SUPABASE_ANON_PUBLIC: "${SERVICE_PASSWORD_ANON}"
+      SUPABASE_SERVICE_ROLE: "${SERVICE_PASSWORD_SERVICE}"
+      SUPABASE_URL: "https://${COOLIFY_URL}"
+      SERVER_URL: "https://${COOLIFY_URL}"
       PGPASSWORD: "${SERVICE_PASSWORD_DB}"
-    # Combined Command: Migrates DB, waits 3 seconds, creates storage structure, runs app
     command: >
       sh -c "
         npx prisma db push &&
@@ -58,6 +56,8 @@ services:
       GOTRUE_JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
       GOTRUE_JWT_EXP: "3600"
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      # Fixes the Auth container crash:
+      API_EXTERNAL_URL: "https://${COOLIFY_URL}"
       GOTRUE_SMTP_HOST: "${SMTP_HOST}"
       GOTRUE_SMTP_PORT: "${SMTP_PORT:-587}"
       GOTRUE_SMTP_USER: "${SMTP_USER}"
@@ -80,6 +80,8 @@ services:
       JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
       STORAGE_BACKEND: "file"
       FILE_STORAGE_BACKEND_PATH: "/var/lib/storage"
+      # Fixes the Storage container crash (52.4MB limit in bytes):
+      FILE_SIZE_LIMIT: "52428800"
 
   # 5. Official Kong Gateway Proxy
   kong:
@@ -89,19 +91,7 @@ services:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: "/etc/kong/kong.yml"
     volumes:
-      - type: bind
-        source: ./kong.yml
-        target: /etc/kong/kong.yml
-        read_only: true
-        content: |
-          _format_version: "1.1"
-          services:
-            - name: shelf-api
-              url: http://app:3000
-              routes:
-                - name: api-route
-                  paths:
-                    - /
+      - ./kong.yml:/etc/kong/kong.yml:ro
 
 volumes:
   shelf_db_data:
