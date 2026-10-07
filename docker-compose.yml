@@ -14,13 +14,11 @@ services:
       INVITE_TOKEN_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
       SUPABASE_ANON_PUBLIC: "${SERVICE_PASSWORD_ANON}"
       SUPABASE_SERVICE_ROLE: "${SERVICE_PASSWORD_SERVICE}"
-      SUPABASE_URL: "https://${COOLIFY_URL}"
+      # Route internally through Docker network to prevent malformed URL crashes:
+      SUPABASE_URL: "http://auth:9999"
       SERVER_URL: "https://${COOLIFY_URL}"
       PGPASSWORD: "${SERVICE_PASSWORD_DB}"
-      
-      # Fixes Map Validation Crash:
       MAPTILER_TOKEN: "placeholder_token"
-      
       SMTP_HOST: "localhost"
       SMTP_PORT: "587"
       SMTP_USER: "placeholder"
@@ -83,6 +81,8 @@ services:
       SERVICE_KEY: "${SERVICE_PASSWORD_SERVICE}"
       DB_CONN_STR: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
+      # Maps required authorization context token to fix storage layout exception:
+      PGRST_JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
       STORAGE_BACKEND: "file"
       FILE_STORAGE_BACKEND_PATH: "/var/lib/storage"
       FILE_SIZE_LIMIT: "52428800"
