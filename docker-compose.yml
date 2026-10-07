@@ -17,13 +17,11 @@ services:
       SUPABASE_URL: "https://${COOLIFY_URL}"
       SERVER_URL: "https://${COOLIFY_URL}"
       PGPASSWORD: "${SERVICE_PASSWORD_DB}"
-      
-      # Fixes App Validation Error:
-      SMTP_HOST: "${SMTP_HOST:://example.com}"
-      SMTP_PORT: "${SMTP_PORT:-587}"
-      SMTP_USER: "${SMTP_USER:-placeholder_user}"
-      SMTP_PWD: "${SMTP_PASSWORD:-placeholder_password}"
-      SMTP_FROM: "${SMTP_FROM_ADDRESS:-noreply@example.com}"
+      SMTP_HOST: "localhost"
+      SMTP_PORT: "587"
+      SMTP_USER: "placeholder"
+      SMTP_PWD: "placeholder"
+      SMTP_FROM: "noreply@example.com"
     command: >
       sh -c "
         npx prisma db push &&
@@ -59,19 +57,13 @@ services:
       GOTRUE_API_HOST: "0.0.0.0"
       GOTRUE_API_PORT: "9999"
       GOTRUE_DB_DRIVER: "postgres"
-      # Fixes Auth Validation Errors:
       DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       GOTRUE_DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       GOTRUE_SITE_URL: "https://${COOLIFY_URL}"
       GOTRUE_JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
       GOTRUE_JWT_EXP: "3600"
-      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "false"
       API_EXTERNAL_URL: "https://${COOLIFY_URL}"
-      GOTRUE_SMTP_HOST: "${SMTP_HOST}"
-      GOTRUE_SMTP_PORT: "${SMTP_PORT:-587}"
-      GOTRUE_SMTP_USER: "${SMTP_USER}"
-      GOTRUE_SMTP_PASS: "${SMTP_PASSWORD}"
-      GOTRUE_SMTP_ADMIN_EMAIL: "${SMTP_FROM_ADDRESS}"
 
   # 4. Official Supabase Storage API
   storage:
@@ -90,7 +82,6 @@ services:
       STORAGE_BACKEND: "file"
       FILE_STORAGE_BACKEND_PATH: "/var/lib/storage"
       FILE_SIZE_LIMIT: "52428800"
-      # Fixes Storage Validation Error:
       GLOBAL_S3_BUCKET: "stub-bucket"
 
 volumes:
