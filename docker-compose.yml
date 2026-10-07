@@ -11,6 +11,7 @@ services:
     environment:
       DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       SESSION_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
+      INVITE_TOKEN_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}" # Resolves App Crash
       SUPABASE_ANON_PUBLIC: "${SERVICE_PASSWORD_ANON}"
       SUPABASE_SERVICE_ROLE: "${SERVICE_PASSWORD_SERVICE}"
       SUPABASE_URL: "https://${COOLIFY_URL}"
@@ -51,12 +52,11 @@ services:
       GOTRUE_API_HOST: "0.0.0.0"
       GOTRUE_API_PORT: "9999"
       GOTRUE_DB_DRIVER: "postgres"
-      GOTRUE_DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
+      GOTRUE_DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres" # Resolves Auth Connection
       GOTRUE_SITE_URL: "https://${COOLIFY_URL}"
       GOTRUE_JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
       GOTRUE_JWT_EXP: "3600"
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
-      # Fixes the Auth container crash:
       API_EXTERNAL_URL: "https://${COOLIFY_URL}"
       GOTRUE_SMTP_HOST: "${SMTP_HOST}"
       GOTRUE_SMTP_PORT: "${SMTP_PORT:-587}"
@@ -78,20 +78,10 @@ services:
       SERVICE_KEY: "${SERVICE_PASSWORD_SERVICE}"
       DB_CONN_STR: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
+      # Explicitly configures local filesystem routing instead of cloud S3 buckets
       STORAGE_BACKEND: "file"
       FILE_STORAGE_BACKEND_PATH: "/var/lib/storage"
-      # Fixes the Storage container crash (52.4MB limit in bytes):
       FILE_SIZE_LIMIT: "52428800"
-
-  # 5. Official Kong Gateway Proxy
-  kong:
-    image: kong:2.8.1-alpine
-    restart: always
-    environment:
-      KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: "/etc/kong/kong.yml"
-    volumes:
-      - ./kong.yml:/etc/kong/kong.yml:ro
 
 volumes:
   shelf_db_data:
