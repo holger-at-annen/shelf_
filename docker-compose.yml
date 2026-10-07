@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # 1. Official Shelf Application UI
+  app:
+    image: ghcr.io/shelf-nu/shelf.nu:latest
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      supabase-init:
+        condition: service_completed_successfully
+    environment:
+      - DATABASE_URL=postgres://postgres:${DB_PASSWORD}@db:5432/postgres
+      - NEXT_PUBLIC_SUPABASE_URL=https://${COOLIFY_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=https://${COOLIFY_URL}
+    labels:
+      - "coolify.managed=true"
+
+  # 2. Official PostgreSQL Database Engine
+  db:
+    image: supabase/postgres:15.1.1.78
+    restart: always
+    volumes:
+      - shelf_db_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 3. Official Supabase GoTrue Auth
+  auth:
+    image: supabase/gotrue:v2.196.0
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - GOTRUE_API_HOST=0.0.0.0
+      - GOTRUE_API_PORT=9999
+      - GOTRUE_DB_DRIVER=postgres
+      - GOTRUE_DATABASE_URL=postgres://postgres:${DB_PASSWORD}@db:5432/postgres
+      - GOTRUE_SITE_URL=https://${COOLIFY_URL}
+      - GOTRUE_JWT_SECRET=${JWT_SECRET}
+      - GOTRUE_JWT_EXP=3600
+      - GOTRUE_EXTERNAL_EMAIL_ENABLED=true
+      - GOTRUE_SMTP_HOST=${SMTP_HOST}
+      - GOTRUE_SMTP_PORT=${SMTP_PORT:-587}
+      - GOTRUE_SMTP_USER=${SMTP_USER}
+      - GOTRUE_SMTP_PASS=${SMTP_PASSWORD}
+      - GOTRUE_SMTP_ADMIN_EMAIL=${SMTP_FROM_ADDRESS}
+
+  # 4. Official Supabase Storage API
+  storage:
+    image: supabase/storage-api:v0.43.0
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - shelf_storage_data:/var/lib/storage
+    environment:
+      - ANON_KEY=${SUPABASE_ANON_KEY}
+      - SERVICE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DB_CONN_STR=postgres://postgres:${DB_PASSWORD}@db:5432/postgres
+      - JWT_SECRET=${JWT_SECRET}
+      - STORAGE_BACKEND=file
+      - FILE_STORAGE_BACKEND_PATH=/var/lib/storage
+
+  # 5. Official Kong Gateway Proxy (Maps network paths cleanly)
+  kong:
+    image: kong:2.8.1-alpine
+    restart: always
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/etc/kong/kong.yml
+    volumes:
+      - ./kong.yml:/etc/kong/kong.yml:ro
+
+  # 6. Automated One-Time Init Setup Container
+  supabase-init:
+    image: postgres:15-alpine
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./init-scripts:/init-scripts:ro
+    environment:
+      - PGPASSWORD=${DB_PASSWORD}
+    command: >
+      sh -c "
+        echo 'Executing Shelf Schema Setup...' &&
+        psql -h db -U postgres -d postgres -f /init-scripts/schema.sql &&
+        echo 'Seeding Required Supabase Storage Buckets...' &&
+        psql -h db -U postgres -d postgres -f /init-scripts/buckets.sql &&
+        echo 'Stack configuration completely ready!'
+      "
+
+volumes:
+  shelf_db_data:
+    name: shelf_db_data
+  shelf_storage_data:
+    name: shelf_storage_data
