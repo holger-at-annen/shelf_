@@ -11,14 +11,12 @@ services:
       supabase-init:
         condition: service_completed_successfully
     environment:
-      - DATABASE_URL=postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres
-      - NEXT_PUBLIC_SUPABASE_URL=https://${COOLIFY_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=$$SERVICE_PASSWORD_ANON
-      - SUPABASE_SERVICE_ROLE_KEY=$$SERVICE_PASSWORD_SERVICE
-      - NEXTAUTH_SECRET=$$SERVICE_PASSWORD_NEXTAUTH
-      - NEXTAUTH_URL=https://${COOLIFY_URL}
-      # Coolify reads these fields to auto-generate the keys safely:
-      - SERVICE_PASSWORD_DB=$$SERVICE_PASSWORD_DB
+      DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
+      NEXT_PUBLIC_SUPABASE_URL: "https://${COOLIFY_URL}"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "${SERVICE_PASSWORD_ANON}"
+      SUPABASE_SERVICE_ROLE_KEY: "${SERVICE_PASSWORD_SERVICE}"
+      NEXTAUTH_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
+      NEXTAUTH_URL: "https://${COOLIFY_URL}"
     command: sh -c "npx prisma db push && node server.js"
     labels:
       - "coolify.managed=true"
@@ -30,7 +28,7 @@ services:
     volumes:
       - shelf_db_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_PASSWORD=$$SERVICE_PASSWORD_DB
+      POSTGRES_PASSWORD: "${SERVICE_PASSWORD_DB}"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -45,21 +43,19 @@ services:
       db:
         condition: service_healthy
     environment:
-      - GOTRUE_API_HOST=0.0.0.0
-      - GOTRUE_API_PORT=9999
-      - GOTRUE_DB_DRIVER=postgres
-      - GOTRUE_DATABASE_URL=postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres
-      - GOTRUE_SITE_URL=https://${COOLIFY_URL}
-      - GOTRUE_JWT_SECRET=$$SERVICE_PASSWORD_JWT
-      - GOTRUE_JWT_EXP=3600
-      - GOTRUE_EXTERNAL_EMAIL_ENABLED=true
-      - GOTRUE_SMTP_HOST=${SMTP_HOST}
-      - GOTRUE_SMTP_PORT=${SMTP_PORT:-587}
-      - GOTRUE_SMTP_USER=${SMTP_USER}
-      - GOTRUE_SMTP_PASS=${SMTP_PASSWORD}
-      - GOTRUE_SMTP_ADMIN_EMAIL=${SMTP_FROM_ADDRESS}
-      # Feeds the generated value directly into this service container
-      - SERVICE_PASSWORD_DB=$$SERVICE_PASSWORD_DB
+      GOTRUE_API_HOST: "0.0.0.0"
+      GOTRUE_API_PORT: "9999"
+      GOTRUE_DB_DRIVER: "postgres"
+      GOTRUE_DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
+      GOTRUE_SITE_URL: "https://${COOLIFY_URL}"
+      GOTRUE_JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_SMTP_HOST: "${SMTP_HOST}"
+      GOTRUE_SMTP_PORT: "${SMTP_PORT:-587}"
+      GOTRUE_SMTP_USER: "${SMTP_USER}"
+      GOTRUE_SMTP_PASS: "${SMTP_PASSWORD}"
+      GOTRUE_SMTP_ADMIN_EMAIL: "${SMTP_FROM_ADDRESS}"
 
   # 4. Official Supabase Storage API
   storage:
@@ -71,21 +67,20 @@ services:
     volumes:
       - shelf_storage_data:/var/lib/storage
     environment:
-      - ANON_KEY=$$SERVICE_PASSWORD_ANON
-      - SERVICE_KEY=$$SERVICE_PASSWORD_SERVICE
-      - DB_CONN_STR=postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres
-      - JWT_SECRET=$$SERVICE_PASSWORD_JWT
-      - STORAGE_BACKEND=file
-      - FILE_STORAGE_BACKEND_PATH=/var/lib/storage
-      - SERVICE_PASSWORD_DB=$$SERVICE_PASSWORD_DB
+      ANON_KEY: "${SERVICE_PASSWORD_ANON}"
+      SERVICE_KEY: "${SERVICE_PASSWORD_SERVICE}"
+      DB_CONN_STR: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
+      JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
+      STORAGE_BACKEND: "file"
+      FILE_STORAGE_BACKEND_PATH: "/var/lib/storage"
 
   # 5. Official Kong Gateway Proxy
   kong:
     image: kong:2.8.1-alpine
     restart: always
     environment:
-      - KONG_DATABASE=off
-      - KONG_DECLARATIVE_CONFIG=/etc/kong/kong.yml
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: "/etc/kong/kong.yml"
     volumes:
       - ./kong.yml:/etc/kong/kong.yml:ro
 
@@ -98,8 +93,7 @@ services:
     volumes:
       - ./init-scripts:/init-scripts:ro
     environment:
-      - PGPASSWORD=${SERVICE_PASSWORD_DB}
-      - SERVICE_PASSWORD_DB=$$SERVICE_PASSWORD_DB
+      PGPASSWORD: "${SERVICE_PASSWORD_DB}"
     command: >
       sh -c "
         echo 'Seeding Required Supabase Storage Buckets...' &&
