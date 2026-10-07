@@ -8,8 +8,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      supabase-init:
-        condition: service_completed_successfully
     environment:
       DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       NEXT_PUBLIC_SUPABASE_URL: "https://${COOLIFY_URL}"
@@ -17,7 +15,16 @@ services:
       SUPABASE_SERVICE_ROLE_KEY: "${SERVICE_PASSWORD_SERVICE}"
       NEXTAUTH_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
       NEXTAUTH_URL: "https://${COOLIFY_URL}"
-    command: sh -c "npx prisma db push && node server.js"
+      # Passes password variable cleanly into container shell context
+      PGPASSWORD: "${SERVICE_PASSWORD_DB}"
+    # Combined Command: Migrates DB, waits 3 seconds, creates storage structure, runs app
+    command: >
+      sh -c "
+        npx prisma db push &&
+        sleep 3 &&
+        psql -h db -U postgres -d postgres -c 'CREATE SCHEMA IF NOT EXISTS storage; INSERT INTO storage.buckets (id, name, public) VALUES ('\''assets'\'', '\''assets'\'', true) ON CONFLICT (id) DO NOTHING;' &&
+        node server.js
+      "
     labels:
       - "coolify.managed=true"
 
@@ -82,7 +89,6 @@ services:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: "/etc/kong/kong.yml"
     volumes:
-      # Coolify reads the 'content' block below and safely builds the file on your server disk
       - type: bind
         source: ./kong.yml
         target: /etc/kong/kong.yml
@@ -96,33 +102,6 @@ services:
                 - name: api-route
                   paths:
                     - /
-
-  # 6. Automated One-Time Init Setup Container
-  supabase-init:
-    image: postgres:15-alpine
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      # Coolify automatically creates this directory and writes your SQL file inside
-      - type: bind
-        source: ./init-scripts/buckets.sql
-        target: /init-scripts/buckets.sql
-        read_only: true
-        content: |
-          -- Creates default Supabase storage buckets needed by Shelf
-          CREATE SCHEMA IF NOT EXISTS storage;
-          INSERT INTO storage.buckets (id, name, public) 
-          VALUES ('assets', 'assets', true) 
-          ON CONFLICT (id) DO NOTHING;
-    environment:
-      PGPASSWORD: "${SERVICE_PASSWORD_DB}"
-    command: >
-      sh -c "
-        echo 'Seeding Required Supabase Storage Buckets...' &&
-        psql -h db -U postgres -d postgres -f /init-scripts/buckets.sql &&
-        echo 'Storage structure initialization complete!'
-      "
 
 volumes:
   shelf_db_data:
