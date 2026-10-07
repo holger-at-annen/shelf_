@@ -11,13 +11,14 @@ services:
       supabase-init:
         condition: service_completed_successfully
     environment:
-      - DATABASE_URL=postgres://postgres:$$SERVICE_PASSWORD_DB@db:5432/postgres
+      - DATABASE_URL=postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres
       - NEXT_PUBLIC_SUPABASE_URL=https://${COOLIFY_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=$$SERVICE_PASSWORD_ANON
       - SUPABASE_SERVICE_ROLE_KEY=$$SERVICE_PASSWORD_SERVICE
       - NEXTAUTH_SECRET=$$SERVICE_PASSWORD_NEXTAUTH
       - NEXTAUTH_URL=https://${COOLIFY_URL}
-    # This automatically pushes migrations on startup if the DB is blank
+      # Coolify reads these fields to auto-generate the keys safely:
+      - SERVICE_PASSWORD_DB=$$SERVICE_PASSWORD_DB
     command: sh -c "npx prisma db push && node server.js"
     labels:
       - "coolify.managed=true"
@@ -47,7 +48,7 @@ services:
       - GOTRUE_API_HOST=0.0.0.0
       - GOTRUE_API_PORT=9999
       - GOTRUE_DB_DRIVER=postgres
-      - GOTRUE_DATABASE_URL=postgres://postgres:$$SERVICE_PASSWORD_DB@db:5432/postgres
+      - GOTRUE_DATABASE_URL=postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres
       - GOTRUE_SITE_URL=https://${COOLIFY_URL}
       - GOTRUE_JWT_SECRET=$$SERVICE_PASSWORD_JWT
       - GOTRUE_JWT_EXP=3600
@@ -57,6 +58,8 @@ services:
       - GOTRUE_SMTP_USER=${SMTP_USER}
       - GOTRUE_SMTP_PASS=${SMTP_PASSWORD}
       - GOTRUE_SMTP_ADMIN_EMAIL=${SMTP_FROM_ADDRESS}
+      # Feeds the generated value directly into this service container
+      - SERVICE_PASSWORD_DB=$$SERVICE_PASSWORD_DB
 
   # 4. Official Supabase Storage API
   storage:
@@ -70,10 +73,11 @@ services:
     environment:
       - ANON_KEY=$$SERVICE_PASSWORD_ANON
       - SERVICE_KEY=$$SERVICE_PASSWORD_SERVICE
-      - DB_CONN_STR=postgres://postgres:$$SERVICE_PASSWORD_DB@db:5432/postgres
+      - DB_CONN_STR=postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres
       - JWT_SECRET=$$SERVICE_PASSWORD_JWT
       - STORAGE_BACKEND=file
       - FILE_STORAGE_BACKEND_PATH=/var/lib/storage
+      - SERVICE_PASSWORD_DB=$$SERVICE_PASSWORD_DB
 
   # 5. Official Kong Gateway Proxy
   kong:
@@ -85,7 +89,7 @@ services:
     volumes:
       - ./kong.yml:/etc/kong/kong.yml:ro
 
-  # 6. Automated One-Time Init Setup Container (Only runs bucket logic now)
+  # 6. Automated One-Time Init Setup Container
   supabase-init:
     image: postgres:15-alpine
     depends_on:
@@ -94,7 +98,8 @@ services:
     volumes:
       - ./init-scripts:/init-scripts:ro
     environment:
-      - PGPASSWORD=$$SERVICE_PASSWORD_DB
+      - PGPASSWORD=${SERVICE_PASSWORD_DB}
+      - SERVICE_PASSWORD_DB=$$SERVICE_PASSWORD_DB
     command: >
       sh -c "
         echo 'Seeding Required Supabase Storage Buckets...' &&
