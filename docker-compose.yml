@@ -11,11 +11,11 @@ services:
       supabase-init:
         condition: service_completed_successfully
     environment:
-      - DATABASE_URL=postgres://postgres:${DB_PASSWORD}@db:5432/postgres
+      - DATABASE_URL=postgres://postgres:$$SERVICE_PASSWORD_DB@db:5432/postgres
       - NEXT_PUBLIC_SUPABASE_URL=https://${COOLIFY_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=$$SERVICE_PASSWORD_ANON
+      - SUPABASE_SERVICE_ROLE_KEY=$$SERVICE_PASSWORD_SERVICE
+      - NEXTAUTH_SECRET=$$SERVICE_PASSWORD_NEXTAUTH
       - NEXTAUTH_URL=https://${COOLIFY_URL}
     # This automatically pushes migrations on startup if the DB is blank
     command: sh -c "npx prisma db push && node server.js"
@@ -29,7 +29,7 @@ services:
     volumes:
       - shelf_db_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_PASSWORD=$$SERVICE_PASSWORD_DB
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -47,9 +47,9 @@ services:
       - GOTRUE_API_HOST=0.0.0.0
       - GOTRUE_API_PORT=9999
       - GOTRUE_DB_DRIVER=postgres
-      - GOTRUE_DATABASE_URL=postgres://postgres:${DB_PASSWORD}@db:5432/postgres
+      - GOTRUE_DATABASE_URL=postgres://postgres:$$SERVICE_PASSWORD_DB@db:5432/postgres
       - GOTRUE_SITE_URL=https://${COOLIFY_URL}
-      - GOTRUE_JWT_SECRET=${JWT_SECRET}
+      - GOTRUE_JWT_SECRET=$$SERVICE_PASSWORD_JWT
       - GOTRUE_JWT_EXP=3600
       - GOTRUE_EXTERNAL_EMAIL_ENABLED=true
       - GOTRUE_SMTP_HOST=${SMTP_HOST}
@@ -68,10 +68,10 @@ services:
     volumes:
       - shelf_storage_data:/var/lib/storage
     environment:
-      - ANON_KEY=${SUPABASE_ANON_KEY}
-      - SERVICE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - DB_CONN_STR=postgres://postgres:${DB_PASSWORD}@db:5432/postgres
-      - JWT_SECRET=${JWT_SECRET}
+      - ANON_KEY=$$SERVICE_PASSWORD_ANON
+      - SERVICE_KEY=$$SERVICE_PASSWORD_SERVICE
+      - DB_CONN_STR=postgres://postgres:$$SERVICE_PASSWORD_DB@db:5432/postgres
+      - JWT_SECRET=$$SERVICE_PASSWORD_JWT
       - STORAGE_BACKEND=file
       - FILE_STORAGE_BACKEND_PATH=/var/lib/storage
 
@@ -94,7 +94,7 @@ services:
     volumes:
       - ./init-scripts:/init-scripts:ro
     environment:
-      - PGPASSWORD=${DB_PASSWORD}
+      - PGPASSWORD=$$SERVICE_PASSWORD_DB
     command: >
       sh -c "
         echo 'Seeding Required Supabase Storage Buckets...' &&
