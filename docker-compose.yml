@@ -9,14 +9,15 @@ services:
       db:
         condition: service_healthy
     environment:
+      # REIN INTERN: Kommunikation direkt zum DB-Container
       DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       SESSION_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
       INVITE_TOKEN_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
       SUPABASE_ANON_PUBLIC: "${SERVICE_PASSWORD_ANON}"
       SUPABASE_SERVICE_ROLE: "${SERVICE_PASSWORD_SERVICE}"
-      # WICHTIG: Zeigt nun auf das zentrale Gateway über deine Coolify-Domain
-      SUPABASE_URL: "https://${COOLIFY_URL}"
-      SERVER_URL: "https://${COOLIFY_URL}"
+      # EXTERN ERFORDERLICH: Wird an den Browser für API-Requests durchgereicht
+      SUPABASE_URL: "${CUSTOM_SHELF_URL}"
+      SERVER_URL: "${CUSTOM_SHELF_URL}"
       PGPASSWORD: "${SERVICE_PASSWORD_DB}"
       MAPTILER_TOKEN: "placeholder_token"
       SMTP_HOST: "localhost"
@@ -31,12 +32,12 @@ services:
         psql -h db -U postgres -d postgres -c \"CREATE SCHEMA IF NOT EXISTS storage; INSERT INTO storage.buckets (id, name, public) VALUES ('assets', 'assets', true) ON CONFLICT (id) DO NOTHING;\" &&
         node server.js
       "
-    # Die Port-Labels für Coolify wurden zum Kong-Service verschoben
 
   # 2. Official PostgreSQL Database Engine
   db:
     image: supabase/postgres:15.1.1.78
     restart: always
+    # Komplett isoliert, keine Ports nach außen geöffnet
     volumes:
       - shelf_db_data:/var/lib/postgresql/data
     environment:
@@ -58,13 +59,15 @@ services:
       GOTRUE_API_HOST: "0.0.0.0"
       GOTRUE_API_PORT: "9999"
       GOTRUE_DB_DRIVER: "postgres"
+      # REIN INTERN: Auth funkt direkt zur DB
       DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       GOTRUE_DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
-      GOTRUE_SITE_URL: "https://${COOLIFY_URL}"
+      GGOTRUE_SITE_URL: "${CUSTOM_SHELF_URL}"
       GOTRUE_JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
       GOTRUE_JWT_EXP: "3600"
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "false"
-      API_EXTERNAL_URL: "https://${COOLIFY_URL}/auth"
+      # EXTERN ERFORDERLICH: Für E-Mail-Redirects und externe Auth-Validierung
+      API_EXTERNAL_URL: "${CUSTOM_SHELF_URL}/auth"
 
   # 4. Official Supabase Storage API
   storage:
@@ -78,6 +81,7 @@ services:
     environment:
       ANON_KEY: "${SERVICE_PASSWORD_ANON}"
       SERVICE_KEY: "${SERVICE_PASSWORD_SERVICE}"
+      # REIN INTERN: Storage kommuniziert nur intern mit der DB
       DB_CONN_STR: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       DATABASE_URL: "postgres://postgres:${SERVICE_PASSWORD_DB}@db:5432/postgres"
       JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
@@ -89,7 +93,7 @@ services:
       REGION: "eu-central-1"
       TENANT_ID: "stub-tenant"
 
-  # 5. Kong API Routing Gateway Proxy
+  # 5. Kong API Routing Gateway Proxy (Einzige Brücke nach außen)
   kong:
     image: kong:2.8.1-alpine
     restart: always
