@@ -14,7 +14,8 @@ services:
       INVITE_TOKEN_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
       SUPABASE_ANON_PUBLIC: "${SERVICE_PASSWORD_ANON}"
       SUPABASE_SERVICE_ROLE: "${SERVICE_PASSWORD_SERVICE}"
-      SUPABASE_URL: "http://auth:9999"
+      # WICHTIG: Zeigt nun auf das zentrale Gateway über deine Coolify-Domain
+      SUPABASE_URL: "https://${COOLIFY_URL}"
       SERVER_URL: "https://${COOLIFY_URL}"
       PGPASSWORD: "${SERVICE_PASSWORD_DB}"
       MAPTILER_TOKEN: "placeholder_token"
@@ -27,12 +28,10 @@ services:
       sh -c "
         npx prisma db push &&
         sleep 3 &&
-        psql -h db -U postgres -d postgres -c 'CREATE SCHEMA IF NOT EXISTS storage; INSERT INTO storage.buckets (id, name, public) VALUES ('\''assets'\'', '\''assets'\'', true) ON CONFLICT (id) DO NOTHING;' &&
+        psql -h db -U postgres -d postgres -c \"CREATE SCHEMA IF NOT EXISTS storage; INSERT INTO storage.buckets (id, name, public) VALUES ('assets', 'assets', true) ON CONFLICT (id) DO NOTHING;\" &&
         node server.js
       "
-    labels:
-      - "coolify.managed=true"
-      - "coolify.port=8080"
+    # Die Port-Labels für Coolify wurden zum Kong-Service verschoben
 
   # 2. Official PostgreSQL Database Engine
   db:
@@ -65,7 +64,7 @@ services:
       GOTRUE_JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
       GOTRUE_JWT_EXP: "3600"
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "false"
-      API_EXTERNAL_URL: "https://${COOLIFY_URL}"
+      API_EXTERNAL_URL: "https://${COOLIFY_URL}/auth"
 
   # 4. Official Supabase Storage API
   storage:
@@ -99,6 +98,20 @@ services:
       KONG_DECLARATIVE_CONFIG_STRING: |
         _format_version: "1.1"
         services:
+          - name: auth-api
+            url: http://auth:9999
+            routes:
+              - name: auth-route
+                paths:
+                  - /auth
+                strip_path: true
+          - name: storage-api
+            url: http://storage:5000
+            routes:
+              - name: storage-route
+                paths:
+                  - /storage
+                strip_path: true
           - name: shelf-api
             url: http://app:8080
             routes:
@@ -107,6 +120,9 @@ services:
                   - /
     ports:
       - "8000:8000"
+    labels:
+      - "coolify.managed=true"
+      - "coolify.port=8000"
 
 volumes:
   shelf_db_data:
