@@ -14,7 +14,6 @@ services:
       INVITE_TOKEN_SECRET: "${SERVICE_PASSWORD_NEXTAUTH}"
       SUPABASE_ANON_PUBLIC: "${SERVICE_PASSWORD_ANON}"
       SUPABASE_SERVICE_ROLE: "${SERVICE_PASSWORD_SERVICE}"
-      # INTERN: Die Server-Komponente nutzt den direkten Kong-Pfad im Docker-Netzwerk
       SUPABASE_URL: "http://kong:8000"
       SERVER_URL: "${CUSTOM_SHELF_URL}"
       PGPASSWORD: "${SERVICE_PASSWORD_DB}"
@@ -63,7 +62,6 @@ services:
       GOTRUE_JWT_SECRET: "${SERVICE_PASSWORD_JWT}"
       GOTRUE_JWT_EXP: "3600"
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "false"
-      # INTERN: Verhindert den Absturz ("invalid URI"), da es nun eine valide URL im Docker-Netzwerk ist
       API_EXTERNAL_URL: "http://kong:8000"
 
   # 4. Official Supabase Storage API
@@ -105,6 +103,8 @@ services:
                 paths:
                   - /auth/v1
                 strip_path: true
+                hosts:
+                  - "*"
           - name: storage-api
             url: http://storage:5000
             routes:
@@ -112,12 +112,16 @@ services:
                 paths:
                   - /storage/v1
                 strip_path: true
+                hosts:
+                  - "*"
           - name: shelf-api
             url: http://app:8080
             routes:
               - name: api-route
                 paths:
                   - /
+                hosts:
+                  - "*"
     ports:
       - "8000:8000"
     labels:
