@@ -116,6 +116,8 @@ services:
               - name: api-route
                 paths:
                   - /
+                hosts:
+                  - "*"
     ports:
       - "8000:8000"
     labels:
